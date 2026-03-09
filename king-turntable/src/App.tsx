@@ -1,15 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence, type Variants } from "motion/react";
-import { Card, CardContent } from "../@/components/ui/card";
-import { Button } from "../@/components/ui/button";
-import { Input } from "../@/components/ui/input";
-import { Badge } from "../@/components/ui/badge";
-import { cn } from "../@/lib/utils";
-
-interface Member {
-  clientId: string;
-  name: string;
-}
+import { Card, CardContent } from "./components/ui/card";
+import { Button } from "./components/ui/button";
+import { Input } from "./components/ui/input";
+import { Badge } from "./components/ui/badge";
+import { api, type Member } from "./api";
 
 // Card flip animation variants
 const CARD_FLIP_VARIANTS: Variants = {
@@ -254,54 +249,132 @@ export default function Home() {
   const [roomCode, setRoomCode] = useState("");
   const [myName, setMyName] = useState("");
   const [displayCode, setDisplayCode] = useState("");
+  const [roomId, setRoomId] = useState("");
   const [members, setMembers] = useState<Member[]>([]);
-  const [myClientId] = useState(() => `client_${Math.random().toString(36).slice(2, 11)}`);
+  const [myClientId] = useState(() => {
+    const saved = localStorage.getItem('clientId');
+    if (saved) return saved;
+    const newId = `client_${Math.random().toString(36).slice(2, 11)}`;
+    localStorage.setItem('clientId', newId);
+    return newId;
+  });
   const [readySet, setReadySet] = useState<Set<string>>(new Set());
   const [isDrawing, setIsDrawing] = useState(false);
   const [myResult, setMyResult] = useState<string | null>(null);
   const [isRevealed, setIsRevealed] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const generateRoomCode = () => Math.random().toString(36).slice(2, 8).toUpperCase();
-
-  const handleCreateRoom = () => {
-    const code = generateRoomCode();
-    setDisplayCode(code);
-    setMembers([{ clientId: myClientId, name: myName || "匿名" }]);
-    setPage("room");
-  };
-
-  const handleJoinRoom = () => {
-    if (!roomCode) return;
-    setDisplayCode(roomCode.toUpperCase());
-    setMembers([{ clientId: myClientId, name: myName || "匿名" }]);
-    setPage("room");
-  };
-
-  const handleReady = () => {
-    setReadySet((prev) => {
-      const next = new Set(prev);
-      if (next.has(myClientId)) {
-        next.delete(myClientId);
-      } else {
-        next.add(myClientId);
+  // Poll room state when in room
+  useEffect(() => {
+    if (page !== "room" || !roomId) return;
+    
+    const pollState = async () => {
+      try {
+        const state = await api.getState(roomId, myClientId);
+        if (state.state === 'DRAWING' || state.state === 'DONE') {
+          setPage("draw");
+        }
+      } catch (e) {
+        console.error('Failed to poll state:', e);
       }
-      return next;
-    });
+    };
+
+    pollState();
+    const interval = setInterval(pollState, 3000);
+    return () => clearInterval(interval);
+  }, [page, roomId, myClientId]);
+
+  const handleCreateRoom = async () => {
+    setIsLoading(true);
+    try {
+      const room = await api.createRoom();
+      setRoomId(room.roomId);
+      setDisplayCode(room.roomCode);
+      
+      // Auto join
+      const result = await api.joinRoom(room.roomId, myClientId, myName || "匿名");
+      if (result.members) {
+        setMembers(result.members);
+      }
+      setPage("room");
+    } catch (e) {
+      console.error('Failed to create room:', e);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleDraw = () => {
+  const handleJoinRoom = async () => {
+    if (!roomCode) return;
+    setIsLoading(true);
+    try {
+      const result = await api.joinRoom(roomCode.toUpperCase(), myClientId, myName || "匿名");
+      if (result.error) {
+        console.error('Failed to join:', result.error);
+        return;
+      }
+      if (result.members) {
+        setMembers(result.members);
+      }
+      // Try to find room ID from result or use code
+      setRoomId(roomCode.toUpperCase());
+      setDisplayCode(roomCode.toUpperCase());
+      setPage("room");
+    } catch (e) {
+      console.error('Failed to join room:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleReady = async () => {
+    if (!roomId) return;
+    
+    const newReady = !readySet.has(myClientId);
+    try {
+      await api.setReady(roomId, myClientId, newReady);
+      setReadySet(prev => {
+        const next = new Set(prev);
+        if (newReady) {
+          next.add(myClientId);
+        } else {
+          next.delete(myClientId);
+        }
+        return next;
+      });
+    } catch (e) {
+      console.error('Failed to set ready:', e);
+    }
+  };
+
+  const handleDraw = async () => {
+    if (!roomId) return;
     setIsDrawing(true);
-    // Simulate draw animation
-    setTimeout(() => {
-      const otherMembers = members.filter((m) => m.clientId !== myClientId);
-      const target = otherMembers[Math.floor(Math.random() * otherMembers.length)];
-      setMyResult(target.name);
+    try {
+      const result = await api.draw(roomId, myClientId);
+      if (result.targetDisplay) {
+        setMyResult(result.targetDisplay);
+      }
+    } catch (e) {
+      console.error('Failed to draw:', e);
+    } finally {
       setIsDrawing(false);
-    }, 2000);
+    }
   };
 
-  const handleReveal = () => {
-    setIsRevealed(true);
+  const handleReveal = async () => {
+    if (!roomId) return;
+    try {
+      const result = await api.reveal(roomId, myClientId);
+      if (result.targetDisplay) {
+        setMyResult(result.targetDisplay);
+        setIsRevealed(true);
+      } else if (result.error === 'already_burned') {
+        setIsRevealed(true);
+      }
+    } catch (e) {
+      console.error('Failed to reveal:', e);
+    }
   };
 
   return (
@@ -371,9 +444,10 @@ export default function Home() {
                   />
                   <Button
                     onClick={handleJoinRoom}
+                    disabled={isLoading || !roomCode}
                     size="lg"
                     variant="secondary"
-                    className="bg-white/10 hover:bg-white/20 text-white border-0 h-12 px-6"
+                    className="bg-white/10 hover:bg-white/20 text-white border-0 h-12 px-6 disabled:opacity-50"
                   >
                     加入
                   </Button>
@@ -390,10 +464,11 @@ export default function Home() {
                 
                 <Button
                   onClick={handleCreateRoom}
+                  disabled={isLoading}
                   size="lg"
-                  className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-semibold h-12 text-base shadow-lg shadow-purple-500/25"
+                  className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-semibold h-12 text-base shadow-lg shadow-purple-500/25 disabled:opacity-50"
                 >
-                  创建房间
+                  {isLoading ? "加载中..." : "创建房间"}
                 </Button>
               </motion.div>
             </CardContent>
@@ -463,9 +538,9 @@ export default function Home() {
                     className="flex items-center gap-4 p-3 rounded-xl bg-white/5"
                   >
                     <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center text-white font-bold text-lg shadow-lg">
-                      {member.name[0]}
+                      {member.displayName[0]}
                     </div>
-                    <span className="text-white flex-1 font-medium">{member.name}</span>
+                    <span className="text-white flex-1 font-medium">{member.displayName}</span>
                     {readySet.has(member.clientId) && (
                       <Badge className="bg-green-500/20 text-green-400 border-0">✓ 已准备</Badge>
                     )}
@@ -483,12 +558,11 @@ export default function Home() {
                 <Button
                   onClick={handleReady}
                   size="lg"
-                  className={cn(
-                    "font-semibold h-11 px-6",
+                  className={
                     readySet.has(myClientId)
-                      ? "bg-white/10 hover:bg-white/20 text-white"
-                      : "bg-green-600 hover:bg-green-500 text-white shadow-lg shadow-green-500/25"
-                  )}
+                      ? "bg-white/10 hover:bg-white/20 text-white h-11 px-6"
+                      : "bg-green-600 hover:bg-green-500 text-white h-11 px-6 shadow-lg shadow-green-500/25"
+                  }
                 >
                   {readySet.has(myClientId) ? "取消准备" : "准备"}
                 </Button>
