@@ -17,9 +17,11 @@ export function useSocket({ roomId, clientId, onStateUpdate, onMemberJoined }: U
   useEffect(() => {
     if (!roomId || !clientId) return;
 
+    console.log('Connecting to socket...', { roomId, clientId });
+    
     // Connect to WebSocket
-    const socket = io(SOCKET_URL, {
-      transports: ['websocket'],
+    const socket = io('', {
+      transports: ['websocket', 'polling'],
       autoConnect: true,
     });
 
