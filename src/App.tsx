@@ -275,7 +275,7 @@ export default function Home() {
         if (state.readySet) {
           setReadySet(new Set(state.readySet));
         }
-        if (state.state === 'DRAWING' || state.state === 'DONE') {
+        if (state.state === 'FROZEN' || state.state === 'DRAWING' || state.state === 'DONE') {
           setPage("draw");
         }
       } catch (e) {
