@@ -1,4 +1,4 @@
-const API_BASE = '';
+const API_BASE = 'http://localhost:3001';
 
 export interface Member {
   clientId: string;
