@@ -12,6 +12,7 @@ export interface RoomState {
 }
 
 export interface JoinResult {
+  roomId: string;
   state: string;
   memberCount: number;
   readyCount: number;

@@ -165,6 +165,7 @@ export class RoomManager {
     });
 
     return {
+      roomId: room.roomId,
       state: room.state,
       memberCount: room.members.length,
       readyCount: room.readySet.length,

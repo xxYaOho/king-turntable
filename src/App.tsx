@@ -341,8 +341,8 @@ export default function Home() {
         alert('房间不存在，请检查房间码');
         return;
       }
-      setMembers(result.members);
-      setRoomId(roomCode.toUpperCase());
+      // Use the actual roomId from response
+      setRoomId(result.roomId);
       setDisplayCode(roomCode.toUpperCase());
       setPage("room");
     } catch (e) {
