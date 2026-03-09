@@ -25,33 +25,33 @@ app.post('/api/room', (req, res) => {
   res.json({ roomId, roomCode, expiresAt: Date.now() + 30 * 60 * 1000 });
 });
 
-app.post('/api/room/:roomId/join', (req, res) => {
+app.post('/api/room/:roomId/join', async (req, res) => {
   const { roomId } = req.params;
   const { clientId, displayName } = req.body;
   
-  const result = roomManager.joinRoom(roomId, clientId, displayName);
+  const result = await roomManager.joinRoom(roomId, clientId, displayName);
   if (!result) {
     return res.status(404).json({ error: 'Room not found' });
   }
   res.json(result);
 });
 
-app.post('/api/room/:roomId/ready', (req, res) => {
+app.post('/api/room/:roomId/ready', async (req, res) => {
   const { roomId } = req.params;
   const { clientId, ready } = req.body;
   
-  const result = roomManager.setReady(roomId, clientId, ready);
+  const result = await roomManager.setReady(roomId, clientId, ready);
   if (!result) {
     return res.status(404).json({ error: 'Room not found' });
   }
   res.json(result);
 });
 
-app.post('/api/room/:roomId/draw', (req, res) => {
+app.post('/api/room/:roomId/draw', async (req, res) => {
   const { roomId } = req.params;
   const { clientId, idempotencyKey } = req.body;
   
-  const result = roomManager.draw(roomId, clientId, idempotencyKey);
+  const result = await roomManager.draw(roomId, clientId, idempotencyKey);
   if (!result) {
     return res.status(404).json({ error: 'Room not found' });
   }
@@ -61,11 +61,11 @@ app.post('/api/room/:roomId/draw', (req, res) => {
   res.json(result);
 });
 
-app.post('/api/room/:roomId/reveal', (req, res) => {
+app.post('/api/room/:roomId/reveal', async (req, res) => {
   const { roomId } = req.params;
   const { clientId } = req.body;
   
-  const result = roomManager.reveal(roomId, clientId);
+  const result = await roomManager.reveal(roomId, clientId);
   if (!result) {
     return res.status(404).json({ error: 'Room not found' });
   }
