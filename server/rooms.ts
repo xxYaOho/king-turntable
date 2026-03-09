@@ -270,26 +270,25 @@ export class RoomManager {
       let lastDrawer = room.drawersRemaining[0];
       let lastTarget = room.targetsRemaining[0];
 
-      // Swap if self-assign (for n>2)
-      if (lastDrawer === lastTarget && room.members.length > 2) {
-        // Find someone to swap with - pick first assigned drawer
-        const swapDrawer = Object.keys(room.assignments)[0];
-        if (swapDrawer) {
-          const originalTarget = room.assignments[swapDrawer];
-          // Swap: lastDrawer gets original target, swapDrawer gets lastTarget (which is themselves, but now we assign them lastDrawer's old target)
-          room.assignments[lastDrawer] = originalTarget;
-          room.assignments[swapDrawer] = lastDrawer; // swapDrawer now gets lastDrawer's ID
-          lastTarget = originalTarget; // Update for the DONE check
-        }
-      } else if (lastDrawer === lastTarget && room.members.length === 2) {
-        // n=2: swap
-        const otherClientId = room.members.find(m => m.clientId !== lastDrawer)?.clientId;
-        if (otherClientId) {
-          // Swap assignments
-          const otherAssignment = room.assignments[otherClientId];
-          room.assignments[lastDrawer] = otherAssignment || otherClientId;
-          if (otherAssignment) {
-            room.assignments[otherClientId] = lastDrawer;
+      // If self-assign, swap with someone
+      if (lastDrawer === lastTarget) {
+        // Get all assigned targets
+        const assignedTargets = Object.values(room.assignments);
+        // Find a target that's not the lastDrawer
+        const availableTargets = room.members
+          .map(m => m.clientId)
+          .filter(id => id !== lastDrawer && !assignedTargets.includes(id));
+        
+        if (availableTargets.length > 0) {
+          // Assign the available target to last drawer
+          room.assignments[lastDrawer] = availableTargets[0];
+        } else {
+          // Swap with first person who has an assignment
+          const firstDrawer = Object.keys(room.assignments)[0];
+          if (firstDrawer) {
+            const temp = room.assignments[firstDrawer];
+            room.assignments[firstDrawer] = lastDrawer;
+            room.assignments[lastDrawer] = temp;
           }
         }
       } else {

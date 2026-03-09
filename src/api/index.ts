@@ -1,4 +1,5 @@
-const API_BASE = 'http://localhost:3001';
+// Use relative URL - works if frontend and backend are on same port, or via proxy
+const API_BASE = window.location.port === '5173' ? 'http://localhost:3001' : '';
 
 export interface Member {
   clientId: string;
