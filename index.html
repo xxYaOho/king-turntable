@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>King Turntable - 顺序抽取配对</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      --primary: #6366f1;
+      --primary-dark: #4f46e5;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --gray: #6b7280;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #1e293b;
+      --text-light: #64748b;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 420px;
+      margin: 0 auto;
+    }
+    
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 16px;
+    }
+    
+    h1 {
+      font-size: 20px;
+      font-weight: 600;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: var(--text-light);
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+    
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 14px 24px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 12px;
+    }
+    
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: var(--primary-dark);
+    }
+    
+    .btn-secondary {
+      background: #e2e8f0;
+      color: var(--text);
+    }
+    
+    .btn-success {
+      background: var(--success);
+      color: white;
+    }
+    
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .btn-loading {
+      position: relative;
+      pointer-events: none;
+    }
+    
+    .btn-loading::after {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border: 2px solid transparent;
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    
+    @keyframes spin {
+      to { transform: translateY(-50%) rotate(360deg); }
+    }
+    
+    .input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 16px;
+      margin-bottom: 12px;
+      transition: border-color 0.2s;
+    }
+    
+    .input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    
+    .room-code {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: 8px;
+      text-align: center;
+      color: var(--primary);
+      padding: 16px;
+      background: #eef2ff;
+      border-radius: 12px;
+      margin: 16px 0;
+    }
+    
+    .members-list {
+      list-style: none;
+    }
+    
+    .member-item {
+      display: flex;
+      align-items: center;
+      padding: 12px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    
+    .member-item:last-child {
+      border-bottom: none;
+    }
+    
+    .member-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), #8b5cf6);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      margin-right: 12px;
+    }
+    
+    .member-info {
+      flex: 1;
+    }
+    
+    .member-name {
+      font-weight: 500;
+    }
+    
+    .member-status {
+      font-size: 12px;
+      color: var(--text-light);
+    }
+    
+    .member-status.ready {
+      color: var(--success);
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    
+    .badge-primary { background: #eef2ff; color: var(--primary); }
+    .badge-success { background: #dcfce7; color: var(--success); }
+    .badge-warning { background: #fef3c7; color: var(--warning); }
+    
+    .stats {
+      display: flex;
+      justify-content: space-around;
+      text-align: center;
+      padding: 16px 0;
+      border-top: 1px solid #f1f5f9;
+      margin-top: 16px;
+    }
+    
+    .stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-light);
+    }
+    
+    .result-card {
+      text-align: center;
+      padding: 32px;
+    }
+    
+    .result-avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--success), #22d3ee);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      font-weight: 700;
+      margin: 0 auto 16px;
+    }
+    
+    .result-text {
+      font-size: 18px;
+      color: var(--text-light);
+      margin-bottom: 8px;
+    }
+    
+    .result-name {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+    
+    .burn-notice {
+      background: #fef3c7;
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 13px;
+      color: #92400e;
+      margin-top: 16px;
+    }
+    
+    .hidden { display: none !important; }
+    
+    .fade-in {
+      animation: fadeIn 0.3s ease-out;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1e293b;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-size: 14px;
+      z-index: 1000;
+      animation: slideUp 0.3s ease-out;
+    }
+    
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+      to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 首页：创建/加入房间 -->
+    <div id="home-page" class="card fade-in">
+      <h1>🎯 King Turntable</h1>
+      <p class="subtitle">顺序抽取配对 · 阅后即焚</p>
+      
+      <button class="btn btn-primary" onclick="createRoom()">创建房间</button>
+      
+      <div style="text-align: center; margin: 16px 0; color: var(--text-light);">或</div>
+      
+      <input type="text" id="join-code" class="input" placeholder="输入房间码" maxlength="6">
+      <input type="text" id="join-name" class="input" placeholder="你的昵称" maxlength="20">
+      <button class="btn btn-secondary" onclick="joinRoom()">加入房间</button>
+    </div>
+    
+    <!-- 房间页：等待/准备 -->
+    <div id="room-page" class="card hidden">
+      <h1>房间已创建</h1>
+      <p class="subtitle">分享房间码给朋友加入</p>
+      
+      <div class="room-code" id="display-room-code">------</div>
+      
+      <div class="stats">
+        <div>
+          <div class="stat-value" id="member-count">0</div>
+          <div class="stat-label">成员</div>
+        </div>
+        <div>
+          <div class="stat-value" id="ready-count">0</div>
+          <div class="stat-label">已准备</div>
+        </div>
+        <div>
+          <div class="stat-value" id="drawn-count">0</div>
+          <div class="stat-label">已抽取</div>
+        </div>
+      </div>
+      
+      <ul class="members-list" id="members-list"></ul>
+      
+      <button class="btn btn-success" id="ready-btn" onclick="toggleReady()">准备</button>
+      
+      <div style="margin-top: 16px;">
+        <input type="text" id="my-name" class="input" placeholder="修改昵称" maxlength="20" onchange="updateName()">
+      </div>
+      
+      <div class="burn-notice" id="room-status">
+        ⚠️ 等待所有人准备后开始抽取
+      </div>
+    </div>
+    
+    <!-- 抽取页：抽取结果 -->
+    <div id="draw-page" class="card hidden">
+      <div class="result-card">
+        <div class="badge badge-warning" style="margin-bottom: 16px;" id="draw-phase">等待抽取</div>
+        
+        <div id="before-draw">
+          <p class="result-text">准备好了吗？</p>
+          <button class="btn btn-primary" onclick="draw()">开始抽取</button>
+        </div>
+        
+        <div id="draw-result" class="hidden">
+          <div class="result-avatar" id="result-avatar">?</div>
+          <p class="result-text">你抽到了</p>
+          <p class="result-name" id="result-name">------</p>
+          <div class="burn-notice">
+            🔥 阅后即焚！请自行记录，关闭页面后可能无法再次查看
+          </div>
+          <button class="btn btn-secondary" onclick="copyResult()" style="margin-top: 12px;">复制结果</button>
+        </div>
+        
+        <div id="already-drawn" class="hidden">
+          <p class="result-text">你已完成抽取</p>
+          <button class="btn btn-secondary" onclick="revealAgain()">查看结果</button>
+        </div>
+        
+        <div id="waiting-others" class="hidden">
+          <p class="result-text">等待其他人抽取...</p>
+          <div class="stats" style="border: none; margin-top: 0;">
+            <div>
+              <div class="stat-value" id="remaining-draws">0</div>
+              <div class="stat-label">剩余</div>
+            </div>
+          </div>
+        </div>
+        
+        <div id="all-done" class="hidden">
+          <p class="result-text">🎉 抽取完成！</p>
+          <div class="burn-notice">
+            房间将在 5 分钟后销毁
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div id="toast" class="toast hidden"></div>
+
+  <script>
+    // ===== 模拟后端状态 =====
+    const STATE = {
+      OPEN: 'open',
+      FROZEN: 'frozen', 
+      DRAWING: 'drawing',
+      DONE: 'done'
+    };
+    
+    // 本地模拟数据（实际项目中这些都在服务端）
+    let roomData = {
+      roomId: null,
+      roomCode: null,
+      state: STATE.OPEN,
+      members: [],
+      readySet: new Set(),
+      drawersRemaining: [],
+      targetsRemaining: [],
+      assignments: {},
+      revealed: new Set()
+    };
+    
+    let myClientId = localStorage.getItem('clientId') || generateId();
+    localStorage.setItem('clientId', myClientId);
+    
+    function generateId() {
+      return 'c_' + Math.random().toString(36).substr(2, 9);
+    }
+    
+    function generateRoomCode() {
+      return Math.random().toString(36).substr(2, 6).toUpperCase();
+    }
+    
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 2500);
+    }
+    
+    function getInitials(name) {
+      return name.charAt(0).toUpperCase();
+    }
+    
+    // ===== 页面导航 =====
+    function showPage(pageId) {
+      ['home-page', 'room-page', 'draw-page'].forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+      });
+      document.getElementById(pageId).classList.remove('hidden');
+    }
+    
+    // ===== 创建房间 =====
+    function createRoom() {
+      const nameInput = document.getElementById('join-name');
+      const name = nameInput.value.trim() || '匿名用户';
+      
+      roomData.roomId = 'room_' + generateId();
+      roomData.roomCode = generateRoomCode();
+      roomData.state = STATE.OPEN;
+      
+      // 创建者自动加入
+      joinRoomInternal(roomData.roomCode, name);
+      showPage('room-page');
+      updateRoomUI();
+    }
+    
+    // ===== 加入房间 =====
+    function joinRoom() {
+      const code = document.getElementById('join-code').value.trim().toUpperCase();
+      const name = document.getElementById('join-name').value.trim() || '匿名用户';
+      
+      if (!code) {
+        showToast('请输入房间码');
+        return;
+      }
+      
+      // 模拟：如果是新码则创建房间（Demo 简化逻辑）
+      if (!roomData.roomCode || roomData.roomCode !== code) {
+        roomData.roomId = 'room_' + generateId();
+        roomData.roomCode = code;
+        roomData.state = STATE.OPEN;
+        roomData.members = [];
+        roomData.readySet = new Set();
+        roomData.assignments = {};
+        roomData.revealed = new Set();
+      }
+      
+      joinRoomInternal(code, name);
+      showPage('room-page');
+      updateRoomUI();
+    }
+    
+    function joinRoomInternal(code, name) {
+      const existing = roomData.members.find(m => m.clientId === myClientId);
+      if (!existing) {
+        roomData.members.push({
+          clientId: myClientId,
+          name: name,
+          joinedAt: Date.now()
+        });
+      } else {
+        existing.name = name;
+      }
+      document.getElementById('my-name').value = name;
+    }
+    
+    // ===== 更新房间状态 =====
+    function updateRoomUI() {
+      document.getElementById('display-room-code').textContent = roomData.roomCode;
+      
+      const memberCount = roomData.members.length;
+      const readyCount = roomData.readySet.size;
+      const drawnCount = Object.keys(roomData.assignments).length;
+      
+      document.getElementById('member-count').textContent = memberCount;
+      document.getElementById('ready-count').textContent = readyCount;
+      document.getElementById('drawn-count').textContent = drawnCount;
+      
+      // 成员列表
+      const list = document.getElementById('members-list');
+      list.innerHTML = roomData.members.map(m => {
+        const isMe = m.clientId === myClientId;
+        const isReady = roomData.readySet.has(m.clientId);
+        return `
+          <li class="member-item">
+            <div class="member-avatar">${getInitials(m.name)}</div>
+            <div class="member-info">
+              <div class="member-name">${m.name} ${isMe ? '(你)' : ''}</div>
+              <div class="member-status ${isReady ? 'ready' : ''}">
+                ${isReady ? '✓ 已准备' : '等待准备'}
+              </div>
+            </div>
+          </li>
+        `;
+      }).join('');
+      
+      // 准备按钮
+      const readyBtn = document.getElementById('ready-btn');
+      const isReady = roomData.readySet.has(myClientId);
+      readyBtn.textContent = isReady ? '取消准备' : '准备';
+      readyBtn.className = isReady ? 'btn btn-secondary' : 'btn btn-success';
+      
+      // 房间状态提示
+      const status = document.getElementById('room-status');
+      if (roomData.state === STATE.OPEN || roomData.state === STATE.FROZEN) {
+        if (readyCount === memberCount && memberCount >= 2) {
+          status.textContent = '✓ 全员准备完成！即将开始抽取...';
+          status.style.background = '#dcfce7';
+          status.style.color = '#166534';
+          // 自动进入抽取阶段
+          setTimeout(() => enterDrawingPhase(), 1500);
+        } else {
+          status.textContent = `⚠️ 等待所有人准备后开始抽取 (${readyCount}/${memberCount})`;
+          status.style.background = '#fef3c7';
+          status.style.color = '#92400e';
+        }
+      }
+    }
+    
+    // ===== 准备/取消准备 =====
+    function toggleReady() {
+      if (roomData.state === STATE.DRAWING || roomData.state === STATE.DONE) {
+        showToast('已经开始抽取，无法取消准备');
+        return;
+      }
+      
+      const isReady = roomData.readySet.has(myClientId);
+      if (isReady) {
+        roomData.readySet.delete(myClientId);
+      } else {
+        roomData.readySet.add(myClientId);
+      }
+      
+      updateRoomUI();
+    }
+    
+    // ===== 修改昵称 =====
+    function updateName() {
+      const newName = document.getElementById('my-name').value.trim();
+      if (newName) {
+        const member = roomData.members.find(m => m.clientId === myClientId);
+        if (member) {
+          member.name = newName;
+          updateRoomUI();
+        }
+      }
+    }
+    
+    // ===== 进入抽取阶段 =====
+    function enterDrawingPhase() {
+      roomData.state = STATE.DRAWING;
+      roomData.drawersRemaining = roomData.members.map(m => m.clientId);
+      roomData.targetsRemaining = roomData.members.map(m => m.clientId);
+      
+      showPage('draw-page');
+      updateDrawUI();
+    }
+    
+    // ===== 抽取逻辑 =====
+    function draw() {
+      // 检查是否已抽取
+      if (roomData.assignments[myClientId]) {
+        showPage('draw-page');
+        updateDrawUI();
+        return;
+      }
+      
+      // 模拟网络延迟
+      const btn = event.target;
+      btn.classList.add('btn-loading');
+      btn.disabled = true;
+      
+      setTimeout(() => {
+        // 原子抽取
+        const drawer = myClientId;
+        const targets = roomData.targetsRemaining.filter(t => t !== drawer);
+        
+        if (targets.length === 0) {
+          showToast('没有可抽取的目标');
+          btn.classList.remove('btn-loading');
+          btn.disabled = false;
+          return;
+        }
+        
+        // 随机选择一个目标
+        const targetIndex = Math.floor(Math.random() * targets.length);
+        const target = targets[targetIndex];
+        
+        // 记录结果
+        roomData.assignments[drawer] = target;
+        roomData.targetsRemaining = roomData.targetsRemaining.filter(t => t !== target);
+        
+        // 立即标记为已reveal（一次性）
+        roomData.revealed.add(drawer);
+        
+        btn.classList.remove('btn-loading');
+        updateDrawUI();
+        
+        // 检查是否全部完成
+        checkAllDrawn();
+      }, 500);
+    }
+    
+    // ===== 检查是否全部抽取完成 =====
+    function checkAllDrawn() {
+      const totalMembers = roomData.members.length;
+      const drawnCount = Object.keys(roomData.assignments).length;
+      
+      if (drawnCount === totalMembers) {
+        roomData.state = STATE.DONE;
+        updateDrawUI();
+      }
+    }
+    
+    // ===== 再次查看结果 =====
+    function revealAgain() {
+      if (roomData.revealed.has(myClientId)) {
+        // 已阅后即焚
+        document.getElementById('before-draw').classList.add('hidden');
+        document.getElementById('draw-result').classList.add('hidden');
+        document.getElementById('already-drawn').classList.add('hidden');
+        document.getElementById('waiting-others').classList.add('hidden');
+        document.getElementById('all-done').classList.add('hidden');
+        
+        const phase = document.getElementById('draw-phase');
+        phase.textContent = '🔥 已销毁';
+        phase.className = 'badge badge-warning';
+        
+        showToast('结果已阅后即焚，无法再次查看');
+        return;
+      }
+      
+      // 允许再次查看（宽松模式）
+      updateDrawUI();
+    }
+    
+    // ===== 复制结果 =====
+    function copyResult() {
+      const targetId = roomData.assignments[myClientId];
+      const target = roomData.members.find(m => m.clientId === targetId);
+      const text = `我抽到了：${target ? target.name : '未知'}`;
+      
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('已复制到剪贴板');
+      });
+    }
+    
+    // ===== 更新抽取页面 =====
+    function updateDrawUI() {
+      const myAssignment = roomData.assignments[myClientId];
+      const totalMembers = roomData.members.length;
+      const drawnCount = Object.keys(roomData.assignments).length;
+      const remaining = totalMembers - drawnCount;
+      
+      document.getElementById('remaining-draws').textContent = remaining;
+      
+      const phase = document.getElementById('draw-phase');
+      
+      // 重置所有区域
+      document.getElementById('before-draw').classList.add('hidden');
+      document.getElementById('draw-result').classList.add('hidden');
+      document.getElementById('already-drawn').classList.add('hidden');
+      document.getElementById('waiting-others').classList.add('hidden');
+      document.getElementById('all-done').classList.add('hidden');
+      
+      if (roomData.state === STATE.DONE) {
+        phase.textContent = '🎉 完成';
+        phase.className = 'badge badge-success';
+        document.getElementById('all-done').classList.remove('hidden');
+        return;
+      }
+      
+      phase.textContent = '🎯 抽取中';
+      phase.className = 'badge badge-primary';
+      
+      if (myAssignment) {
+        const target = roomData.members.find(m => m.clientId === myAssignment);
+        document.getElementById('result-avatar').textContent = getInitials(target.name);
+        document.getElementById('result-name').textContent = target.name;
+        document.getElementById('draw-result').classList.remove('hidden');
+      } else if (roomData.revealed.has(myClientId)) {
+        document.getElementById('already-drawn').classList.remove('hidden');
+      } else {
+        document.getElementById('before-draw').classList.remove('hidden');
+      }
+      
+      if (!myAssignment && drawnCount > 0) {
+        document.getElementById('waiting-others').classList.remove('hidden');
+      }
+    }
+    
+    // ===== 初始化 =====
+    // 恢复之前的房间状态（Demo简化：刷新后需要重新加入）
+    console.log('Demo initialized. ClientId:', myClientId);
+  </script>
+</body>
+</html>
