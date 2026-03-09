@@ -262,32 +262,29 @@ export class RoomManager {
 
     // Check if last drawer - auto-assign
     if (room.drawersRemaining.length === 1 && room.targetsRemaining.length === 1) {
-      const lastDrawer = room.drawersRemaining[0];
-      const lastTarget = room.targetsRemaining[0];
+      let lastDrawer = room.drawersRemaining[0];
+      let lastTarget = room.targetsRemaining[0];
 
-      // Swap if self-assign
+      // Swap if self-assign (for n>2)
       if (lastDrawer === lastTarget && room.members.length > 2) {
-        // Find someone to swap with
-        const swapTarget = Object.keys(room.assignments).find(
-          drawer => room.assignments[drawer] !== lastDrawer
-        );
-        if (swapTarget) {
-          // Swap
-          const originalTarget = room.assignments[swapTarget];
-          room.assignments[swapTarget] = lastTarget;
+        // Find someone to swap with - pick first assigned drawer
+        const swapDrawer = Object.keys(room.assignments)[0];
+        if (swapDrawer) {
+          const originalTarget = room.assignments[swapDrawer];
+          // Swap: lastDrawer gets original target, swapDrawer gets lastTarget (which is themselves, but now we assign them lastDrawer's old target)
           room.assignments[lastDrawer] = originalTarget;
+          room.assignments[swapDrawer] = lastDrawer; // swapDrawer now gets lastDrawer's ID
+          lastTarget = originalTarget; // Update for the DONE check
         }
       } else if (lastDrawer === lastTarget && room.members.length === 2) {
-        // n=2: swap with the only other person
-        const otherPerson = room.members.find(m => m.clientId !== lastDrawer);
-        if (otherPerson) {
-          room.assignments[lastDrawer] = otherPerson.clientId;
-          // Update the other person's assignment if exists
-          const otherDrawer = Object.keys(room.assignments).find(
-            d => room.assignments[d] === otherPerson.clientId
-          );
-          if (otherDrawer) {
-            room.assignments[otherDrawer] = lastDrawer;
+        // n=2: swap
+        const otherClientId = room.members.find(m => m.clientId !== lastDrawer)?.clientId;
+        if (otherClientId) {
+          // Swap assignments
+          const otherAssignment = room.assignments[otherClientId];
+          room.assignments[lastDrawer] = otherAssignment || otherClientId;
+          if (otherAssignment) {
+            room.assignments[otherClientId] = lastDrawer;
           }
         }
       } else {
