@@ -311,17 +311,20 @@ export default function Home() {
       const result = await api.joinRoom(roomCode.toUpperCase(), myClientId, myName || "匿名");
       if (result.error) {
         console.error('Failed to join:', result.error);
+        alert('房间不存在或已锁定');
         return;
       }
-      if (result.members) {
-        setMembers(result.members);
+      if (!result.members || result.members.length === 0) {
+        alert('房间不存在，请检查房间码');
+        return;
       }
-      // Try to find room ID from result or use code
+      setMembers(result.members);
       setRoomId(roomCode.toUpperCase());
       setDisplayCode(roomCode.toUpperCase());
       setPage("room");
     } catch (e) {
       console.error('Failed to join room:', e);
+      alert('无法连接到服务器');
     } finally {
       setIsLoading(false);
     }

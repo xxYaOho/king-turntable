@@ -1,0 +1,26 @@
+const handleJoinRoom = async () => {
+    if (!roomCode) return;
+    setIsLoading(true);
+    try {
+      const result = await api.joinRoom(roomCode.toUpperCase(), myClientId, myName || "匿名");
+      if (result.error) {
+        console.error('Failed to join:', result.error);
+        alert('房间不存在或已锁定');
+        return;
+      }
+      if (!result.members) {
+        alert('房间不存在，请检查房间码');
+        return;
+      }
+      setMembers(result.members);
+      // Find room ID - use the roomCode as lookup
+      setRoomId(roomCode.toUpperCase());
+      setDisplayCode(roomCode.toUpperCase());
+      setPage("room");
+    } catch (e) {
+      console.error('Failed to join room:', e);
+      alert('无法连接到服务器');
+    } finally {
+      setIsLoading(false);
+    }
+  };
