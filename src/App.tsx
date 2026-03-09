@@ -272,6 +272,9 @@ export default function Home() {
       try {
         const state = await api.getState(roomId, myClientId);
         if (state.members) setMembers(state.members);
+        if (state.readySet) {
+          setReadySet(new Set(state.readySet));
+        }
         if (state.state === 'DRAWING' || state.state === 'DONE') {
           setPage("draw");
         }

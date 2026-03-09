@@ -38,6 +38,7 @@ export interface StateResult {
   state: string;
   memberCount: number;
   readyCount: number;
+  readySet?: string[];
   drawnCount: number;
   members?: Member[];
   myReady?: boolean;

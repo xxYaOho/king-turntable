@@ -350,6 +350,7 @@ export class RoomManager {
       state: room.state,
       memberCount: room.members.length,
       readyCount: room.readySet.length,
+      readySet: room.readySet,
       drawnCount: Object.keys(room.assignments).length,
       members: room.members,
     };
