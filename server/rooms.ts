@@ -307,6 +307,7 @@ export class RoomManager {
     this.io.to(roomId).emit('state-updated', {
       state: room.state,
       drawnCount: Object.keys(room.assignments).length,
+      members: room.members,
       drawersRemaining: room.drawersRemaining.length,
     });
 
@@ -350,6 +351,7 @@ export class RoomManager {
       memberCount: room.members.length,
       readyCount: room.readySet.length,
       drawnCount: Object.keys(room.assignments).length,
+      members: room.members,
     };
 
     if (clientId) {

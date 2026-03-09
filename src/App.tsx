@@ -271,6 +271,7 @@ export default function Home() {
     const pollState = async () => {
       try {
         const state = await api.getState(roomId, myClientId);
+        if (state.members) setMembers(state.members);
         if (state.state === 'DRAWING' || state.state === 'DONE') {
           setPage("draw");
         }
