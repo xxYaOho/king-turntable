@@ -95,8 +95,8 @@ io.on('connection', (socket) => {
     roomManager.handleSocketJoin(roomId, clientId);
   });
 
-  socket.on('ready', ({ roomId, clientId, ready }) => {
-    roomManager.setReady(roomId, clientId, ready);
+  socket.on('ready', async ({ roomId, clientId, ready }) => {
+    await roomManager.setReady(roomId, clientId, ready);
   });
 
   socket.on('disconnect', () => {
