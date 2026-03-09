@@ -2,7 +2,7 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
-import { RoomManager } from './rooms.js';
+import { RoomManager } from './rooms';
 
 const app = express();
 const httpServer = createServer(app);
