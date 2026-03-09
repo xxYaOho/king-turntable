@@ -204,6 +204,8 @@ export class RoomManager {
       state: room.state,
       memberCount: room.members.length,
       readyCount: room.readySet.length,
+      members: room.members,
+      readySet: room.readySet,
       drawersRemaining: room.drawersRemaining.length,
     });
 
@@ -217,6 +219,8 @@ export class RoomManager {
           state: 'DRAWING',
           memberCount: room!.members.length,
           readyCount: room!.readySet.length,
+          members: room!.members,
+          readySet: room!.readySet,
           drawersRemaining: room!.drawersRemaining.length,
         });
       }, 500);
@@ -303,8 +307,11 @@ export class RoomManager {
     // Notify all (without revealing specific assignments)
     this.io.to(roomId).emit('state-updated', {
       state: room.state,
-      drawnCount: Object.keys(room.assignments).length,
+      memberCount: room.members.length,
+      readyCount: room.readySet.length,
       members: room.members,
+      readySet: room.readySet,
+      drawnCount: Object.keys(room.assignments).length,
       drawersRemaining: room.drawersRemaining.length,
     });
 

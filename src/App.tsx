@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence, type Variants } from "motion/react";
 import { Card, CardContent } from "./components/ui/card";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
 import { Badge } from "./components/ui/badge";
 import { api, type Member } from "./api";
+import { useSocket } from "./api/socket";
 
 // Card flip animation variants
 const CARD_FLIP_VARIANTS: Variants = {
@@ -264,28 +265,46 @@ export default function Home() {
   const [isRevealed, setIsRevealed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Poll room state when in room
+  // Use WebSocket for real-time sync
+  const handleStateUpdate = useCallback((data: any) => {
+    if (data.members) setMembers(data.members);
+    if (data.readySet) {
+      setReadySet(new Set(data.readySet));
+    }
+    if (data.state === 'FROZEN' || data.state === 'DRAWING' || data.state === 'DONE') {
+      setPage("draw");
+    }
+  }, []);
+
+  const handleMemberJoined = useCallback((data: any) => {
+    if (data.members) setMembers(data.members);
+  }, []);
+
+  const { emitReady } = useSocket({
+    roomId: page === "room" || page === "draw" ? roomId : undefined,
+    clientId: myClientId,
+    onStateUpdate: handleStateUpdate,
+    onMemberJoined: handleMemberJoined,
+  });
+
+  // Initial state fetch when entering room (fallback if WebSocket fails)
   useEffect(() => {
-    if (page !== "room" || !roomId) return;
+    if ((page !== "room" && page !== "draw") || !roomId) return;
     
-    const pollState = async () => {
+    const fetchState = async () => {
       try {
         const state = await api.getState(roomId, myClientId);
         if (state.members) setMembers(state.members);
-        if (state.readySet) {
-          setReadySet(new Set(state.readySet));
-        }
+        if (state.readySet) setReadySet(new Set(state.readySet));
         if (state.state === 'FROZEN' || state.state === 'DRAWING' || state.state === 'DONE') {
           setPage("draw");
         }
       } catch (e) {
-        console.error('Failed to poll state:', e);
+        console.error('Failed to fetch state:', e);
       }
     };
 
-    pollState();
-    const interval = setInterval(pollState, 3000);
-    return () => clearInterval(interval);
+    fetchState();
   }, [page, roomId, myClientId]);
 
   const handleCreateRoom = async () => {
@@ -338,17 +357,21 @@ export default function Home() {
     if (!roomId) return;
     
     const newReady = !readySet.has(myClientId);
+    
+    // Optimistic update
+    setReadySet(prev => {
+      const next = new Set(prev);
+      if (newReady) next.add(myClientId);
+      else next.delete(myClientId);
+      return next;
+    });
+    
+    // Emit via WebSocket for real-time sync
+    emitReady(newReady);
+    
+    // Also call API as fallback
     try {
       await api.setReady(roomId, myClientId, newReady);
-      setReadySet(prev => {
-        const next = new Set(prev);
-        if (newReady) {
-          next.add(myClientId);
-        } else {
-          next.delete(myClientId);
-        }
-        return next;
-      });
     } catch (e) {
       console.error('Failed to set ready:', e);
     }
